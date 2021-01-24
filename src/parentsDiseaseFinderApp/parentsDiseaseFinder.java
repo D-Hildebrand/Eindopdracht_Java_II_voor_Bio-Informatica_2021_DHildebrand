@@ -4,7 +4,10 @@ import java.io.*;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Scanner;
 import java.util.zip.GZIPInputStream;
 
@@ -17,6 +20,7 @@ public class parentsDiseaseFinder {
 
     /**
      * Function to download reference MD5 file from NCBI.
+     *
      * @throws IOException
      */
     public static void referenceMD5Downloader() throws IOException {
@@ -33,6 +37,7 @@ public class parentsDiseaseFinder {
 
     /**
      * Function to download reference file from NCBI.
+     *
      * @throws IOException
      */
     public static void referenceDownloader() throws IOException {
@@ -52,6 +57,7 @@ public class parentsDiseaseFinder {
      * Function to check if the reference md5 is still up to date.
      * Downloads 'variant_summary.txt.gz.md5' using referenceMD5Downloader and
      * downloads 'variant_summary.txt.gz' using referenceDownloader if it needs to.
+     *
      * @throws IOException
      */
     public static void referenceChecker() throws IOException {
@@ -74,10 +80,12 @@ public class parentsDiseaseFinder {
             // Just to throw a fileNotFound exception in case the file is not there
             filereader = new Scanner(new File("variant_summary.txt.gz"));
 
-            // If the downloaded hash isn't the same as the local hash, overwrite old reference with new reference
-            if (!MD5local.equals(MD5download)){
+            // If the downloaded hash isn't the same as the local hash, delete old reference, download new reference
+            if (!MD5local.equals(MD5download)) {
                 System.out.println("Local reference file is not the latest variant. " +
-                        "Commencing download of most recent variant.\n");
+                        "Deleting old file and commencing download of most recent variant.\n");
+                // Deletes old reference file before downloading new one
+                Files.deleteIfExists(Path.of("variant_summary.txt.gz"));
                 referenceDownloader();
             } else {
                 System.out.println("File 'variant_summary.txt.gz.md5' matches, files up to date.\n");
@@ -91,31 +99,155 @@ public class parentsDiseaseFinder {
                     "'variant_summary.txt.gz.md5' and 'variant_summary.txt.gz'.\n");
             referenceMD5Downloader();
             referenceDownloader();
-            System.out.println("Finished downloads.");
+            System.out.println("Finished downloads.\n");
             variant_summaryToObject();
         }
-
-
-
     }
+
     public static void variant_summaryToObject() throws IOException {
         try {
 
+            //
+            System.out.println("Reading creating reference variable...");
             BufferedReader in = new BufferedReader
                     (new InputStreamReader
                             (new GZIPInputStream
                                     (new FileInputStream("variant_summary.txt.gz"))));
 
+            // Creating ArrayList for variant data
+            ArrayList<diseaseVariant> variantRefArray = new ArrayList<>();
             String line;
-            while ((line = in.readLine()) != null)
-                System.out.println(line);
+
+            // To parse through the entire variant_summary file
+            while ((line = in.readLine()) != null) {
+                String[] temp = line.split("\t");
+
+                variantRefArray.add(new diseaseVariant(Integer.parseInt(temp[0]), temp[1], Integer.parseInt(temp[31]),
+                        Integer.parseInt(temp[7]), Integer.parseInt(temp[3]), temp[32], temp[33], temp[13], temp[18]));
+            }
+            System.out.println("Finished creating reference variable.\n");
+
+            // For sorting
+            System.out.println("Sorting reference data by chromosome...");
+            Collections.sort(variantRefArray);
+            System.out.println("Finished sorting reference data.\n");
 
 
-        } catch (FileNotFoundException exception){
+        } catch (FileNotFoundException exception) {
             System.out.println("Something went wrong finding file 'variant_summary.txt.gz', " +
                     "restarting checking phase now.");
             referenceChecker();
         }
+    }
+}
+
+/**
+ * Class diseaseVariant to for variant_summary data input, so each line inserted is an object.
+ * Implemented compareTo method to order chromosomes.
+ */
+class diseaseVariant implements Comparable<diseaseVariant> {
+
+    private int alelleID;
+    private String type;
+    private int position;
+    private int pathogenicity;
+    private int geneID;
+    private String refAlelle;
+    private String altAlelle;
+    private String disease;
+    private String chromosome;
+
+    // Getters & Setters for all the variables
+    public int getAlelleID() {
+        return alelleID;
+    }
+
+    public void setAlelleID(int alelleID) {
+        this.alelleID = alelleID;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public int getPosition() {
+        return position;
+    }
+
+    public void setPosition(int position) {
+        this.position = position;
+    }
+
+    public int getPathogenicity() {
+        return pathogenicity;
+    }
+
+    public void setPathogenicity(int pathogenicity) {
+        this.pathogenicity = pathogenicity;
+    }
+
+    public int getGeneID() {
+        return geneID;
+    }
+
+    public void setGeneID(int geneID) {
+        this.geneID = geneID;
+    }
+
+    public String getRefAlelle() {
+        return refAlelle;
+    }
+
+    public void setRefAlelle(String refAlelle) {
+        this.refAlelle = refAlelle;
+    }
+
+    public String getAltAlelle() {
+        return altAlelle;
+    }
+
+    public void setAltAlelle(String altAlelle) {
+        this.altAlelle = altAlelle;
+    }
+
+    public String getDisease() {
+        return disease;
+    }
+
+    public void setDisease(String disease) {
+        this.disease = disease;
+    }
+
+    public String getChromosome() {
+        return chromosome;
+    }
+
+    public void setChromosome(String chromosome) {
+        this.chromosome = chromosome;
+    }
+
+    // compareTo method to order chromosomes
+    public int compareTo(diseaseVariant d) {
+        return this.getChromosome().compareTo(((diseaseVariant) d).getChromosome());
+    }
+
+    public diseaseVariant(int alelleID, String type, int position, int pathogenicity, int geneID,
+                          String refAlelle, String altAlelle, String disease, String chromosome) {
+
+        this.alelleID = alelleID;
+        this.type = type;
+        this.position = position;
+        this.pathogenicity = pathogenicity;
+        this.geneID = geneID;
+        this.refAlelle = refAlelle;
+        this.altAlelle = altAlelle;
+        this.disease = disease;
+        this.chromosome = chromosome;
+
     }
 
 }
