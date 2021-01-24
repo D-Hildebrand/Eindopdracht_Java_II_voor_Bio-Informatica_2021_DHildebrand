@@ -86,13 +86,12 @@ public class parentsDiseaseFinder {
 
 
         } catch (FileNotFoundException exception) {
+            // Prompts user to not finding one or both files and starts download of MD5 and reference files.
             System.out.println("One or both reference files not found, commencing download of reference files " +
-                    "'variant_summary.txt.gz.md5' and 'variant_summary.txt.gz'" +
-                    "Downloading 'variant_summary.txt.gz.md5'...\n");
+                    "'variant_summary.txt.gz.md5' and 'variant_summary.txt.gz'.\n");
             referenceMD5Downloader();
-            System.out.println("Downloaded 'variant_summary.txt.gz.md5', downloading 'variant_summary.txt.gz'...\n");
             referenceDownloader();
-            System.out.println("Downloaded 'variant_summary.txt.gz'");
+            System.out.println("Finished downloads.");
             variant_summaryToObject();
         }
 
@@ -101,19 +100,15 @@ public class parentsDiseaseFinder {
     }
     public static void variant_summaryToObject() throws IOException {
         try {
-            InputStream fileStream = new FileInputStream("variant_summary.txt.gz");
-            InputStream gzStream = new GZIPInputStream(fileStream);
-            Reader decoder = new InputStreamReader(gzStream, StandardCharsets.UTF_16LE);
-            BufferedReader buffered = new BufferedReader(decoder);
 
-            Scanner reader = new Scanner(buffered);
+            BufferedReader in = new BufferedReader
+                    (new InputStreamReader
+                            (new GZIPInputStream
+                                    (new FileInputStream("variant_summary.txt.gz"))));
 
-            while (reader.hasNextLine()) {
-                String line = reader.nextLine();
+            String line;
+            while ((line = in.readLine()) != null)
                 System.out.println(line);
-            }
-
-
 
 
         } catch (FileNotFoundException exception){
