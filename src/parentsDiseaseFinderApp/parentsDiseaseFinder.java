@@ -1,25 +1,27 @@
 package parentsDiseaseFinderApp;
 
+import javax.swing.*;
+import javax.swing.filechooser.FileSystemView;
 import java.io.*;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Scanner;
+import java.util.*;
 import java.util.zip.GZIPInputStream;
 
 
 public class parentsDiseaseFinder {
 
     public static void main(String[] args) throws IOException {
-        referenceChecker();
+//        referenceChecker();
+        parentSelecter();
     }
 
     /**
-     * Function to download reference MD5 file from NCBI.
+     * Function to download 'variant_summary.txt.gz.md5' reference MD5 file from NCBI.
+     * Makes system prints to tell user what the program is doing.
      *
      * @throws IOException
      */
@@ -36,12 +38,15 @@ public class parentsDiseaseFinder {
     }
 
     /**
-     * Function to download reference file from NCBI.
+     * Function to download 'variant_summary.txt.gz' reference file from NCBI.
+     * Makes system prints to tell user what the program is doing.
      *
      * @throws IOException
      */
     public static void referenceDownloader() throws IOException {
 
+        // Deletes old reference file before downloading new one, if there is one
+        Files.deleteIfExists(Path.of("variant_summary.txt.gz"));
         // Download with system prints for the user to know what the program is downloading...
         System.out.println("Downloading 'variant_summary.txt.gz'...");
         URL website2 = new URL("ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/tab_delimited/variant_summary.txt.gz");
@@ -62,7 +67,7 @@ public class parentsDiseaseFinder {
      */
     public static void referenceChecker() throws IOException {
 
-        System.out.println("Checking local 'variant_summary.txt.gz.md5' vs online version...\n");
+        System.out.println("Comparing local 'variant_summary.txt.gz.md5' vs online version...\n");
         try {
             Scanner filereader = new Scanner(new File("variant_summary.txt.gz.md5"));
 
@@ -84,11 +89,9 @@ public class parentsDiseaseFinder {
             if (!MD5local.equals(MD5download)) {
                 System.out.println("Local reference file is not the latest variant. " +
                         "Deleting old file and commencing download of most recent variant.\n");
-                // Deletes old reference file before downloading new one
-                Files.deleteIfExists(Path.of("variant_summary.txt.gz"));
                 referenceDownloader();
             } else {
-                System.out.println("File 'variant_summary.txt.gz.md5' matches, files up to date.\n");
+                System.out.println("File 'variant_summary.txt.gz.md5' matches; files up to date.\n");
                 variant_summaryToObject();
             }
 
@@ -104,11 +107,18 @@ public class parentsDiseaseFinder {
         }
     }
 
+    /**
+     * Function to place variant_summary data into a list.
+     * bigO: N
+     *
+     * @throws IOException
+     */
     public static void variant_summaryToObject() throws IOException {
-        try {
 
-            //
-            System.out.println("Reading creating reference variable...");
+        try {
+            // Using system prints to give user input of what the program is doing
+            System.out.println("Parsing reference data...");
+            // BufferedReader to read the .gz file
             BufferedReader in = new BufferedReader
                     (new InputStreamReader
                             (new GZIPInputStream
@@ -118,28 +128,142 @@ public class parentsDiseaseFinder {
             ArrayList<diseaseVariant> variantRefArray = new ArrayList<>();
             String line;
 
+            // Dirty but effective way of removing first line
+            String firstline = in.readLine();
+            firstline = null;
+
             // To parse through the entire variant_summary file
             while ((line = in.readLine()) != null) {
                 String[] temp = line.split("\t");
 
+                // To add required data from variant_summary.txt.gz into objects
                 variantRefArray.add(new diseaseVariant(Integer.parseInt(temp[0]), temp[1], Integer.parseInt(temp[31]),
                         Integer.parseInt(temp[7]), Integer.parseInt(temp[3]), temp[32], temp[33], temp[13], temp[18]));
             }
-            System.out.println("Finished creating reference variable.\n");
+            System.out.println("Finished creating reference data.\n");
 
             // For sorting
             System.out.println("Sorting reference data by chromosome...");
             Collections.sort(variantRefArray);
             System.out.println("Finished sorting reference data.\n");
 
+            // To test & see how Collections.sort works
+//            for (diseaseVariant var : variantRefArray){
+//                System.out.println(var.getChromosome());
+//            }
+
 
         } catch (FileNotFoundException exception) {
             System.out.println("Something went wrong finding file 'variant_summary.txt.gz', " +
                     "restarting checking phase now.");
             referenceChecker();
+
+        } catch (NumberFormatException exception) {
+            System.out.println("Fatal error: 'variant_summary.txt.gz' corrupt, " +
+                    "attempting re-download of 'variant_summary.txt.gz' before re-attempting parsing...\n");
+            referenceDownloader();
+            variant_summaryToObject();
         }
     }
+
+
+    public static void parentSelecter() {
+
+        System.out.println("\nThis app will ONLY work with 23andMe files!!!");
+
+        try {
+
+            System.out.println("Please select the 23andMe file for parent 1:");
+            File parent1 = new File(Objects.requireNonNull(fileSelecter()));
+            String idParent1 = parent1.getName();
+            String parent1Path = parent1.getAbsolutePath();
+            System.out.println("Selected file: " + idParent1 + "\n");
+            int iden1 = Integer.parseInt(idParent1.split("\\.")[0]);
+
+
+            System.out.println("Please select the 23andMe file for parent 2:");
+            File parent2 = new File(Objects.requireNonNull(fileSelecter()));
+            String idParent2 = parent2.getName();
+            String parent2Path = parent2.getAbsolutePath();
+            System.out.println("Selected file: " + idParent2 + "\n");
+            int iden2 = Integer.parseInt(idParent2.split("\\.")[0]);
+
+        } catch (Exception exception) {
+            System.out.println("\n!!!ERROR!!!");
+            System.out.println(exception);
+            System.out.println("Selected file is likely not an 23andMe file. Please select the files again." +
+                    "\nIf this problem persists, please select a different 23andMe file and notify the developer.\n");
+            parentSelecter();
+        }
+    }
+
+    public static HashMap<String, String[]> fileToHashMap(String filepath) throws FileNotFoundException {
+
+        HashMap<String, String[]> parent = new HashMap<>();
+//        File inputfile = new File(filepath);
+        String line;
+        String[] splitLine;
+
+        try {
+            Scanner filereader = new Scanner(new File(filepath));
+
+            // While loop to loop through file
+            while (filereader.hasNextLine()) {
+                line = filereader.nextLine();
+
+                // If the line doesn't start with #
+                if (!line.startsWith("#")) {
+                    splitLine = line.split("\t");
+
+                    // RSID / IntID as key, while line as value
+                    // splitLine[0]=Identifier; splitLine[1]=chromosome; splitLine[2]=position; splitLine[3]=genotype
+                    parent.put(splitLine[0], splitLine);
+                }
+            }
+            return parent;
+
+        } catch (FileNotFoundException e) {
+            System.out.println("Unexpected error: The selected file has not been found. " +
+                    "The file might have been moved.\n" +
+                    "Please try selecting files again.");
+            parentSelecter();
+        }
+        return null;
+    }
+
+    /**
+     * Function for the user to select a file, returns String with file location.
+     *
+     * @return String fileloc (absolute file location of selected file)
+     */
+    public static String fileSelecter() {
+        // File chooser for the user to select inputfiles
+        JFileChooser fc = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
+
+        int returnValue = fc.showOpenDialog(null);
+
+        // If selected file is approved, return the location
+        if (returnValue == JFileChooser.APPROVE_OPTION) {
+            File selectedFile = fc.getSelectedFile();
+            String fileloc = selectedFile.getAbsolutePath();
+            return fileloc;
+
+            // If the filechooser is closed, stops the program.
+        } else if (returnValue == JFileChooser.CANCEL_OPTION || returnValue == JFileChooser.ABORT) {
+            System.out.println("File chooser closed, stopping program.");
+            System.exit(0);
+
+            // If the file in any other way is not accepted, restarts the filechooser to try again.
+        } else {
+            System.out.println("File not accepted, please try again.");
+            fileSelecter();
+        }
+        return null;
+    }
+
+
 }
+
 
 /**
  * Class diseaseVariant to for variant_summary data input, so each line inserted is an object.
