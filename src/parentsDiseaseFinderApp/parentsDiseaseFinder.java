@@ -15,8 +15,11 @@ import java.util.zip.GZIPInputStream;
 public class parentsDiseaseFinder {
 
     public static void main(String[] args) throws IOException {
-//        referenceChecker();
-        parentSelecter();
+        referenceChecker();
+
+//        ArrayList<HashMap> tempmap = parentComparer();
+//        HashMap<String, String[]> parent1HashMap = tempmap.get(0);
+//        HashMap<String, String[]> parent2HashMap = tempmap.get(1);
     }
 
     /**
@@ -124,8 +127,8 @@ public class parentsDiseaseFinder {
                             (new GZIPInputStream
                                     (new FileInputStream("variant_summary.txt.gz"))));
 
-            // Creating ArrayList for variant data
-            ArrayList<diseaseVariant> variantRefArray = new ArrayList<>();
+            // Creating HashMap for variant data, stored as chromosome+position as key, with an object as value
+            HashMap<String, diseaseVariant> variantRefHashMap = new HashMap();
             String line;
 
             // Dirty but effective way of removing first line
@@ -137,20 +140,18 @@ public class parentsDiseaseFinder {
                 String[] temp = line.split("\t");
 
                 // To add required data from variant_summary.txt.gz into objects
-                variantRefArray.add(new diseaseVariant(Integer.parseInt(temp[0]), temp[1], Integer.parseInt(temp[31]),
+                // temp[0]=AllelID, temp[1]=Type, temp[31]=Position, temp[7]=Pathogenicity, temp[3]=GeneID,
+                // temp[32]=referenceAllele, temp[33]=alternateAllele, temp[13]=disease, temp[18]=Chromosome.
+                // variantRefHashMap has the chromosome+position as key with an object as value
+                variantRefHashMap.put((temp[18]+temp[31]),new diseaseVariant(Integer.parseInt(temp[0]), temp[1], Integer.parseInt(temp[31]),
                         Integer.parseInt(temp[7]), Integer.parseInt(temp[3]), temp[32], temp[33], temp[13], temp[18]));
             }
             System.out.println("Finished creating reference data.\n");
 
             // For sorting
-            System.out.println("Sorting reference data by chromosome...");
-            Collections.sort(variantRefArray);
-            System.out.println("Finished sorting reference data.\n");
-
-            // To test & see how Collections.sort works
-//            for (diseaseVariant var : variantRefArray){
-//                System.out.println(var.getChromosome());
-//            }
+//            System.out.println("Sorting reference data by chromosome...");
+//            Collections.sort(variantRefHashMap);
+//            System.out.println("Finished sorting reference data.\n");
 
 
         } catch (FileNotFoundException exception) {
@@ -167,40 +168,78 @@ public class parentsDiseaseFinder {
     }
 
 
-    public static void parentSelecter() {
+    public static ArrayList<HashMap> parentComparer() {
 
-        System.out.println("\nThis app will ONLY work with 23andMe files!!!");
+        System.out.println("\nThis app will ONLY work with standard 23andMe files!!!");
 
         try {
 
             System.out.println("Please select the 23andMe file for parent 1:");
             File parent1 = new File(Objects.requireNonNull(fileSelecter()));
             String idParent1 = parent1.getName();
-            String parent1Path = parent1.getAbsolutePath();
             System.out.println("Selected file: " + idParent1 + "\n");
+            // Asking for an integer early to throw error in case of improper file
             int iden1 = Integer.parseInt(idParent1.split("\\.")[0]);
 
 
             System.out.println("Please select the 23andMe file for parent 2:");
             File parent2 = new File(Objects.requireNonNull(fileSelecter()));
             String idParent2 = parent2.getName();
-            String parent2Path = parent2.getAbsolutePath();
             System.out.println("Selected file: " + idParent2 + "\n");
+            // Asking for an integer early to throw error in case of improper file
             int iden2 = Integer.parseInt(idParent2.split("\\.")[0]);
 
-        } catch (Exception exception) {
+
+            if (parent1.equals(parent2)) {
+                System.out.println("You have selected the same file twice, please select two different files.");
+                parentComparer();
+            } else {
+                // Calls function fileToHashMap to get HashMaps with the filepath
+                System.out.println("Analysing both files to find overlapping mutations...");
+                HashMap<String, String[]> parent1HashMap = Objects.requireNonNull(fileToHashMap(parent1.getAbsolutePath()));
+                HashMap<String, String[]> parent2HashMap = Objects.requireNonNull(fileToHashMap(parent2.getAbsolutePath()));
+
+                // Making sure both parents have the same dataset
+                parent1HashMap.keySet().retainAll(parent2HashMap.keySet());
+                parent2HashMap.keySet().retainAll(parent1HashMap.keySet());
+
+
+                if (parent1HashMap.isEmpty() && parent2HashMap.isEmpty()) {
+                    System.out.println("No overlapping mutations have been found between both parents. " +
+                            "\nHaving children is totally safe.");
+                } else {
+                    System.out.println("Ovelapping mutations have been found between both parents. \n"+parent1HashMap.size()
+                    +" overlapping identifiers found between both parent files. " +
+                            "\nPreparing reference data for analysis.");
+
+                    ArrayList<HashMap> templist = new ArrayList<>();
+                    templist.add(parent1HashMap);
+                    templist.add(parent2HashMap);
+                    return templist;
+                }
+
+            }
+        } catch (Exception e) {
             System.out.println("\n!!!ERROR!!!");
-            System.out.println(exception);
-            System.out.println("Selected file is likely not an 23andMe file. Please select the files again." +
+            System.out.println(e);
+            System.out.println("Selected file is likely not an 23andMe file. Please select the correct files again." +
                     "\nIf this problem persists, please select a different 23andMe file and notify the developer.\n");
-            parentSelecter();
+            parentComparer();
         }
+        return null;
     }
 
+    /**
+     * Function to place a file into a HashMap.
+     * BigO = N
+     *
+     * @param filepath; String with the absolute path of a file
+     * @throws FileNotFoundException restarts file selection, as a file might have been moved or corrupted.
+     * @returns HashMap<String, String [ ]>
+     */
     public static HashMap<String, String[]> fileToHashMap(String filepath) throws FileNotFoundException {
 
         HashMap<String, String[]> parent = new HashMap<>();
-//        File inputfile = new File(filepath);
         String line;
         String[] splitLine;
 
@@ -226,7 +265,7 @@ public class parentsDiseaseFinder {
             System.out.println("Unexpected error: The selected file has not been found. " +
                     "The file might have been moved.\n" +
                     "Please try selecting files again.");
-            parentSelecter();
+            parentComparer();
         }
         return null;
     }
@@ -260,8 +299,6 @@ public class parentsDiseaseFinder {
         }
         return null;
     }
-
-
 }
 
 
