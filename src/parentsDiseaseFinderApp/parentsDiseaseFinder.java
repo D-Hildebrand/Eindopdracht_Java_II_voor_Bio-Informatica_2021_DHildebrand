@@ -333,28 +333,31 @@ public class parentsDiseaseFinder {
         System.out.println("Starting to write new file: '"+parent1ID+"compared_with"+parent2ID+".txt"+"'...\n");
         FileWriter fileWriter = new FileWriter(parent1ID+"compared_with"+parent2ID+".txt");
         fileWriter.write("#RSID\tNT Combination\tChromosome number\tNT parent1\tNT parent2\t"
-                +parent1ID+"\t"+parent2ID);
+                +"parent1ID"+"\t"+"parent2ID"+"\n");
 
         // parentData[0]=Identifier; parentData[1]=chromosome; parentData[2]=position; parentData[3]=genotype
         System.out.println("Searching for diseases...");
 
         //todo Dit gedeelte moet gefixt worden, eerst een ClassCastException en toen een NullPointerException
-        Iterator it = (parent1HashMap.values.toArray().iterator());
 
         // To loop though the parent1HashMap values
-        while (it.hasNext()) {
-
-            String[] parentData = (String[]) it.next();
+        for (Object o : parent1HashMap.entrySet()) {
+            // To get rid of cast errors and nullpointerexceptions
+            Map.Entry element = (Map.Entry)o;
+            String[] parentData = (String[]) element.getValue();
 
             String key = parentData[1] + parentData[2] + parentData[3];
             if (variantRefHashMap.containsKey((key))) {
                 diseaseVariant match = (diseaseVariant) variantRefHashMap.get(key);
-                String[] parent2Data = (String[]) parent2HashMap.get(parentData[1]);
+
+                // To get rid of cast errors and nullpointerexceptions
+                element = (Map.Entry) o;
+                String[] parent2Data = (String[]) element.getValue();
 
                 // To write RSID + NT combo + chromosome nr. + parent1 NT + parent 2 NT + parent1ID + parent2ID
                 fileWriter.write(parentData[0] + "\t" + (match.getRefAlelle() + match.getAltAlelle()) + "\t" +
                         match.getChromosome() + "\t" + parentData[3] + "\t" + parent2Data[3] + "\t" +
-                        parent1ID + parent2ID + "\n");
+                        parent1ID + "\t"+ parent2ID + "\n");
             }
         }
         fileWriter.close();
