@@ -157,9 +157,7 @@ public class parentsDiseaseFinder {
 //            System.out.println("Dubbele waardes Chr+Loc+ref+alt: " + i);
 //            System.out.println("Finished creating reference data.\n");
 
-
-
-            // Used to be an array, which could be sorted, but now it's a hashmap, which is unsortable.
+//            variantRefHashMap used to be an array, which could be sorted, but now it's a hashmap, which is unsortable.
 //            System.out.println("Sorting reference data by chromosome...");
 //            Collections.sort(variantRefHashMap);
 //            System.out.println("Finished sorting reference data.\n");
@@ -320,6 +318,15 @@ public class parentsDiseaseFinder {
         return null;
     }
 
+    /**
+     *
+     * @param parent1ID String containing the ID of parent 1
+     * @param parent2ID String containing the ID of parent 2
+     * @param variantRefHashMap HashMap containing all diseaseVariant objects as values and
+     * @param parent1HashMap
+     * @param parent2HashMap
+     * @throws IOException
+     */
     public static void diseaseSeeker(String parent1ID, String parent2ID, HashMap variantRefHashMap,
                                      HashMap parent1HashMap, HashMap parent2HashMap) throws IOException {
 
@@ -336,7 +343,7 @@ public class parentsDiseaseFinder {
                 +"parent1ID"+"\t"+"parent2ID"+"\n");
 
         // parentData[0]=Identifier; parentData[1]=chromosome; parentData[2]=position; parentData[3]=genotype
-        System.out.println("Searching for diseases...");
+        System.out.println("Searching for diseases...\n");
 
         //todo Dit gedeelte moet gefixt worden, eerst een ClassCastException en toen een NullPointerException
 
@@ -346,6 +353,7 @@ public class parentsDiseaseFinder {
             Map.Entry element = (Map.Entry)o;
             String[] parentData = (String[]) element.getValue();
 
+            // To create the key and check if it's in variantRefHashMap
             String key = parentData[1] + parentData[2] + parentData[3];
             if (variantRefHashMap.containsKey((key))) {
                 diseaseVariant match = (diseaseVariant) variantRefHashMap.get(key);
