@@ -1,3 +1,7 @@
+// Made by Dominic Hildebrand
+// Java end project 2021
+// 27-1-2021
+
 package parentsDiseaseFinderApp;
 
 import javax.swing.*;
@@ -109,7 +113,9 @@ public class parentsDiseaseFinder {
     }
 
     /**
-     * Function to place variant_summary data into a list.
+     * Function to place variant_summary data into a HashMap.
+     * Creates HashMap variantRefHashMap key: chromosome+position+refAlell+altAlell, value: Object diseaseVariant
+     * Calls parentComparer(variantRefHashMap)
      * bigO: N
      *
      * @throws IOException
@@ -141,26 +147,15 @@ public class parentsDiseaseFinder {
 
                 // To add required data from variant_summary.txt.gz into objects
                 // temp[0]=AllelID, temp[1]=Type, temp[31]=Position, temp[7]=Pathogenicity, temp[3]=GeneID,
-                // temp[32]=referenceAllele, temp[33]=alternateAllele, temp[13]=disease, temp[18]=Chromosome.
-                // variantRefHashMap has the chromosome+position as key with an object as value
+                // temp[32]=referenceAlelle, temp[33]=alternateAlelle, temp[13]=disease, temp[18]=Chromosome.
 
-//Todo later weghalen als het nodig is, of niet, idc
-//                if (variantRefHashMap.containsKey((temp[18] + temp[31] + temp[32] + temp[33]))) {
-//                    i++;
-//                    System.out.println(temp[18] + temp[31] + temp[32] + temp[33]);
-//                }
-                variantRefHashMap.put((temp[18] + temp[31] + temp[32] + temp[33]), new diseaseVariant(Integer.parseInt(temp[0]), temp[1], Integer.parseInt(temp[31]),
-                        Integer.parseInt(temp[7]), Integer.parseInt(temp[3]), temp[32], temp[33], temp[13], temp[18]));
+                // variantRefHashMap has the chromosome+position+refAlell+altAlell as key with an object as value
+                variantRefHashMap.put((temp[18] + temp[31] + temp[32] + temp[33]),
+                        new diseaseVariant(Integer.parseInt(temp[0]), temp[1], Integer.parseInt(temp[31]),
+                                Integer.parseInt(temp[7]), Integer.parseInt(temp[3]), temp[32], temp[33], temp[13], temp[18]));
 
             }
-            //Todo Dit stuk hoort hierboven bij. Weghalen als het nodig is.
-//            System.out.println("Dubbele waardes Chr+Loc+ref+alt: " + i);
-//            System.out.println("Finished creating reference data.\n");
-
 //            variantRefHashMap used to be an array, which could be sorted, but now it's a hashmap, which is unsortable.
-//            System.out.println("Sorting reference data by chromosome...");
-//            Collections.sort(variantRefHashMap);
-//            System.out.println("Finished sorting reference data.\n");
 
             parentComparer(variantRefHashMap);
 
@@ -185,7 +180,7 @@ public class parentsDiseaseFinder {
      * parentComparer calls function fileSelecter to receive location of file to use.
      * parentComparer calls function fileToHashMap to receive filled HashMaps with variables.
      *
-     * @param variantRefHashMap dirty way if giving passing over variable to other function
+     * @param variantRefHashMap dirty way of giving passing over variable to another function
      */
     public static void parentComparer(HashMap<String, diseaseVariant> variantRefHashMap) {
 
@@ -215,8 +210,10 @@ public class parentsDiseaseFinder {
             } else {
                 // Calls function fileToHashMap to get HashMaps with the filepath
                 System.out.println("Analysing both files to find overlapping mutations...");
-                HashMap<String, String[]> parent1HashMap = Objects.requireNonNull(fileToHashMap(parent1.getAbsolutePath()));
-                HashMap<String, String[]> parent2HashMap = Objects.requireNonNull(fileToHashMap(parent2.getAbsolutePath()));
+                HashMap<String, String[]> parent1HashMap =
+                        Objects.requireNonNull(fileToHashMap(parent1.getAbsolutePath()));
+                HashMap<String, String[]> parent2HashMap =
+                        Objects.requireNonNull(fileToHashMap(parent2.getAbsolutePath()));
 
                 // Making sure both parents have the same dataset
                 parent1HashMap.keySet().retainAll(parent2HashMap.keySet());
@@ -228,7 +225,8 @@ public class parentsDiseaseFinder {
                             "\nHaving children is totally safe.");
                     System.exit(0);
                 } else {
-                    System.out.println("Ovelapping mutations have been found between both parents. \n" + parent1HashMap.size()
+                    System.out.println("Ovelapping mutations have been found between both parents. " +
+                            "\n" + parent1HashMap.size()
                             + " overlapping identifiers found between both parent files. " +
                             "\nStarting final phase of analysis.");
                     diseaseSeeker(parent1ID, parent2ID, variantRefHashMap, parent1HashMap, parent2HashMap);
@@ -238,8 +236,9 @@ public class parentsDiseaseFinder {
         } catch (Exception e) {
             System.out.println("\n!!!ERROR!!!");
             System.out.println(e);
-            System.out.println("Selected file is likely not an 23andMe file. Please select the correct files again." +
-                    "\nIf this problem persists, please try a different 23andMe file and notify the developer" +
+            System.out.println("Please close all files related to this app. If that's the case, " +
+                    "please select the correct 23andMe files again." +
+                    "\nIf this problem persists, please try a different 23andMe file, notify the developer" +
                     " and give him a good scare.\n");
             parentComparer(variantRefHashMap);
         }
@@ -289,7 +288,7 @@ public class parentsDiseaseFinder {
 
     /**
      * Function for the user to select a file, returns String with file location.
-     * Stops program if filechooser is closed. Re-runs code section section fileSelecter if option is invalid.
+     * Stops program if filechooser is closed. Re-runs method fileSelecter if option is invalid.
      *
      * @return String fileloc (absolute file location of selected file)
      */
@@ -319,38 +318,44 @@ public class parentsDiseaseFinder {
     }
 
     /**
+     * diseaseSeeker uses parentID's to check if a file exists, if it does, deletes it and creates a new file.
+     * Takes parent1hashmap, iterates through each of the values, takes the chrnr, pos and genotype
+     * to assemble the key for variantRefHashMap and checks if the assembled key is in variantRefHashMap.
+     * If it exists, retrieves data from match and writes said data in the created file.
+     * When finished, closes opens created file.
+     * bigO = N
      *
-     * @param parent1ID String containing the ID of parent 1
-     * @param parent2ID String containing the ID of parent 2
-     * @param variantRefHashMap HashMap containing all diseaseVariant objects as values and
-     * @param parent1HashMap
-     * @param parent2HashMap
+     * @param parent1ID         String containing the ID of parent 1
+     * @param parent2ID         String containing the ID of parent 2
+     * @param variantRefHashMap HashMap containing all diseaseVariant objects as values
+     *                          and chr+pos+refAlell+altAlell as key
+     * @param parent1HashMap    HashMap containing RSID as key and String[RSID, chromosomenr, position, genotype]
+     * @param parent2HashMap    HashMap containing RSID as key and String[RSID, chromosomenr, position, genotype]
      * @throws IOException
+     * @creates file parent1ID+"compared_with"+parent2ID+".txt"
      */
     public static void diseaseSeeker(String parent1ID, String parent2ID, HashMap variantRefHashMap,
                                      HashMap parent1HashMap, HashMap parent2HashMap) throws IOException {
 
         // If old file exists, removing said file before writing a new one.
-        if (Files.exists(Path.of(parent1ID+"compared_with"+parent2ID+".txt"))) {
+        if (Files.exists(Path.of(parent1ID + "compared_with" + parent2ID + ".txt"))) {
             System.out.println("Other parent comparison file detected; \n" +
                     "Deleting old file...");
             Files.deleteIfExists(Path.of(parent1ID + "compared_with" + parent2ID + ".txt"));
         }
 
-        System.out.println("Starting to write new file: '"+parent1ID+"compared_with"+parent2ID+".txt"+"'...\n");
-        FileWriter fileWriter = new FileWriter(parent1ID+"compared_with"+parent2ID+".txt");
+        System.out.println("Starting to write new file: '" + parent1ID + "compared_with" + parent2ID + ".txt" + "'...\n");
+        FileWriter fileWriter = new FileWriter(parent1ID + "compared_with" + parent2ID + ".txt");
         fileWriter.write("#RSID\tNT Combination\tChromosome number\tNT parent1\tNT parent2\t"
-                +"parent1ID"+"\t"+"parent2ID"+"\n");
+                + "parent1ID" + "\t" + "parent2ID" + "\n");
 
         // parentData[0]=Identifier; parentData[1]=chromosome; parentData[2]=position; parentData[3]=genotype
         System.out.println("Searching for diseases...\n");
 
-        //todo Dit gedeelte moet gefixt worden, eerst een ClassCastException en toen een NullPointerException
-
         // To loop though the parent1HashMap values
         for (Object o : parent1HashMap.entrySet()) {
             // To get rid of cast errors and nullpointerexceptions
-            Map.Entry element = (Map.Entry)o;
+            Map.Entry element = (Map.Entry) o;
             String[] parentData = (String[]) element.getValue();
 
             // To create the key and check if it's in variantRefHashMap
@@ -358,21 +363,19 @@ public class parentsDiseaseFinder {
             if (variantRefHashMap.containsKey((key))) {
                 diseaseVariant match = (diseaseVariant) variantRefHashMap.get(key);
 
-                // To get rid of cast errors and nullpointerexceptions
-                element = (Map.Entry) o;
-                String[] parent2Data = (String[]) element.getValue();
+                // To retrieve parent2's data
+                String[] parent2Data = (String[]) parent2HashMap.get(parentData[0]);
 
                 // To write RSID + NT combo + chromosome nr. + parent1 NT + parent 2 NT + parent1ID + parent2ID
                 fileWriter.write(parentData[0] + "\t" + (match.getRefAlelle() + match.getAltAlelle()) + "\t" +
                         match.getChromosome() + "\t" + parentData[3] + "\t" + parent2Data[3] + "\t" +
-                        parent1ID + "\t"+ parent2ID + "\n");
+                        parent1ID + "\t" + parent2ID + "\n");
             }
         }
         fileWriter.close();
         System.out.println("File has been written. \nOpening written file...");
-        Desktop.getDesktop().open(new File(parent1ID+"compared_with"+parent2ID+".txt"));
+        Desktop.getDesktop().open(new File(parent1ID + "compared_with" + parent2ID + ".txt"));
     }
-
 }
 
 
@@ -471,9 +474,9 @@ class diseaseVariant implements Comparable<diseaseVariant> {
     }
 
     public String toString() {
-        return type+" mutation on alelle "+alelleID+", gene "+geneID+", chromosome "+chromosome+" position "+position+
-                " where nucleobase "+refAlelle+" is replaced with "+altAlelle+", which may cause disease : "+
-                disease+" with a pathogenicity score of "+pathogenicity+
+        return type + " mutation on alelle " + alelleID + ", gene " + geneID + ", chromosome " + chromosome + " position " + position +
+                " where nucleobase " + refAlelle + " is replaced with " + altAlelle + ", which may cause disease : " +
+                disease + " with a pathogenicity score of " + pathogenicity +
                 ", where 0 means benign and 1 means pathogenic.";
     }
 
