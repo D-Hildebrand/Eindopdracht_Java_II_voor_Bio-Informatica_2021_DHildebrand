@@ -18,7 +18,7 @@ import java.util.zip.GZIPInputStream;
 
 
 /**
- * Application to compare two 23andMe parent files and find possible diseases
+ * Application to compare two 23andMe parent files and find possible diseases if they get children
  */
 public class parentsDiseaseFinder {
 
@@ -31,7 +31,7 @@ public class parentsDiseaseFinder {
      * Function to download 'variant_summary.txt.gz.md5' reference MD5 file from NCBI.
      * Makes system prints to tell user what the program is doing.
      *
-     * @throws IOException
+     * @throws IOException Ambiguous read/write error
      */
     public static void referenceMD5Downloader() throws IOException {
 
@@ -49,7 +49,7 @@ public class parentsDiseaseFinder {
      * Function to download 'variant_summary.txt.gz' reference file from NCBI.
      * Makes system prints to tell user what the program is doing.
      *
-     * @throws IOException
+     * @throws IOException Ambiguous read/write error
      */
     public static void referenceDownloader() throws IOException {
 
@@ -71,7 +71,7 @@ public class parentsDiseaseFinder {
      * Downloads 'variant_summary.txt.gz.md5' using referenceMD5Downloader and
      * downloads 'variant_summary.txt.gz' using referenceDownloader if it needs to.
      *
-     * @throws IOException
+     * @throws IOException Ambiguous read/write error
      */
     public static void referenceChecker() throws IOException {
 
@@ -122,7 +122,7 @@ public class parentsDiseaseFinder {
      * Calls parentComparer(variantRefHashMap)
      * bigO: N
      *
-     * @throws IOException
+     * @throws IOException Ambiguous read/write error
      */
     public static void variant_summaryToObject() throws IOException {
 
@@ -332,7 +332,7 @@ public class parentsDiseaseFinder {
      *                          and chr+pos+refAlell+altAlell as key
      * @param parent1HashMap    HashMap containing RSID as key and String[RSID, chromosomenr, position, genotype]
      * @param parent2HashMap    HashMap containing RSID as key and String[RSID, chromosomenr, position, genotype]
-     * @throws IOException
+     * @throws IOException      Read/Write error
      * @generates file parent1ID+"compared_with"+parent2ID+".txt"
      */
     public static void diseaseSeeker(String parent1ID, String parent2ID, HashMap variantRefHashMap,
@@ -400,7 +400,7 @@ public class parentsDiseaseFinder {
      * contents into a new file.
      *
      * bigO = N
-     *
+     * @Throws IOException Ambiguous Read/Write error
      * @param filename name of the file which needs to be sorted
      */
     public static void fileSorter(String filename) throws IOException {
