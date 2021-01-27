@@ -253,7 +253,7 @@ public class parentsDiseaseFinder {
      *
      * @param filepath; String with the absolute path of a file
      * @throws FileNotFoundException restarts file selection, as a file might have been moved or corrupted.
-     * @returns HashMap<String, String [ ]> key: identifier, value: String [identifier, chromosome, position, genotype]
+     * @returns HashMap(String, String [ ]) key: identifier, value: String [identifier, chromosome, position, genotype]
      */
     public static HashMap<String, String[]> fileToHashMap(String filepath) throws IOException {
 
@@ -400,7 +400,7 @@ public class parentsDiseaseFinder {
      * contents into a new file.
      *
      * bigO = N
-     * @Throws IOException Ambiguous Read/Write error
+     * @throws IOException Ambiguous Read/Write error
      * @param filename name of the file which needs to be sorted
      */
     public static void fileSorter(String filename) throws IOException {
