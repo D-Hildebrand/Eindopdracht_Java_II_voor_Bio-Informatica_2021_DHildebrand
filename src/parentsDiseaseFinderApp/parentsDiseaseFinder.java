@@ -17,6 +17,9 @@ import java.util.*;
 import java.util.zip.GZIPInputStream;
 
 
+/**
+ * Application to compare two 23andMe parent files and find possible diseases
+ */
 public class parentsDiseaseFinder {
 
     public static void main(String[] args) throws IOException {
@@ -89,6 +92,7 @@ public class parentsDiseaseFinder {
 
             // Just to throw a fileNotFound exception in case the file is not there
             filereader = new Scanner(new File("variant_summary.txt.gz"));
+            filereader.close();
 
             // If the downloaded hash isn't the same as the local hash, delete old reference, download new reference
             if (!MD5local.equals(MD5download)) {
@@ -102,7 +106,7 @@ public class parentsDiseaseFinder {
 
 
         } catch (FileNotFoundException exception) {
-            // Prompts user to not finding one or both files and starts download of MD5 and reference files.
+            // Notifies user to not finding one or both files and starts download of MD5 and reference files.
             System.out.println("One or both reference files not found, commencing download of reference files " +
                     "'variant_summary.txt.gz.md5' and 'variant_summary.txt.gz'.\n");
             referenceMD5Downloader();
@@ -138,9 +142,8 @@ public class parentsDiseaseFinder {
             String line;
 
             // Dirty but effective way of removing first line
-            String firstline = in.readLine();
-            firstline = null;
-            int i = 0;
+            in.readLine();
+
             // To parse through the entire variant_summary file
             while ((line = in.readLine()) != null) {
                 String[] temp = line.split("\t");
@@ -152,8 +155,8 @@ public class parentsDiseaseFinder {
                 // variantRefHashMap has the chromosome+position+refAlell+altAlell as key with an object as value
                 variantRefHashMap.put((temp[18] + temp[31] + temp[32] + temp[33]),
                         new diseaseVariant(Integer.parseInt(temp[0]), temp[1], Integer.parseInt(temp[31]),
-                                Integer.parseInt(temp[7]), Integer.parseInt(temp[3]), temp[32], temp[33], temp[13], temp[18]));
-
+                                Integer.parseInt(temp[7]), Integer.parseInt(temp[3]), temp[32], temp[33], temp[13],
+                                temp[18]));
             }
 //            variantRefHashMap used to be an array, which could be sorted, but now it's a hashmap, which is unsortable.
 
@@ -215,7 +218,7 @@ public class parentsDiseaseFinder {
                 HashMap<String, String[]> parent2HashMap =
                         Objects.requireNonNull(fileToHashMap(parent2.getAbsolutePath()));
 
-                // Making sure both parents have the same dataset
+                // Making sure both parents have the same keySet
                 parent1HashMap.keySet().retainAll(parent2HashMap.keySet());
                 parent2HashMap.keySet().retainAll(parent1HashMap.keySet());
 
@@ -228,10 +231,9 @@ public class parentsDiseaseFinder {
                     System.out.println("Ovelapping mutations have been found between both parents. " +
                             "\n" + parent1HashMap.size()
                             + " overlapping identifiers found between both parent files. " +
-                            "\nStarting final phase of analysis.");
+                            "\nStarting final phase of analysis.\n");
                     diseaseSeeker(parent1ID, parent2ID, variantRefHashMap, parent1HashMap, parent2HashMap);
                 }
-
             }
         } catch (Exception e) {
             System.out.println("\n!!!ERROR!!!");
@@ -251,7 +253,7 @@ public class parentsDiseaseFinder {
      *
      * @param filepath; String with the absolute path of a file
      * @throws FileNotFoundException restarts file selection, as a file might have been moved or corrupted.
-     * @returns HashMap<String, String [ ]>
+     * @returns HashMap<String, String [ ]> key: identifier, value: String [identifier, chromosome, position, genotype]
      */
     public static HashMap<String, String[]> fileToHashMap(String filepath) throws IOException {
 
@@ -301,8 +303,7 @@ public class parentsDiseaseFinder {
         // If selected file is approved, return the location
         if (returnValue == JFileChooser.APPROVE_OPTION) {
             File selectedFile = fc.getSelectedFile();
-            String fileloc = selectedFile.getAbsolutePath();
-            return fileloc;
+            return selectedFile.getAbsolutePath();
 
             // If the filechooser is closed, stops the program.
         } else if (returnValue == JFileChooser.CANCEL_OPTION || returnValue == JFileChooser.ABORT) {
@@ -332,7 +333,7 @@ public class parentsDiseaseFinder {
      * @param parent1HashMap    HashMap containing RSID as key and String[RSID, chromosomenr, position, genotype]
      * @param parent2HashMap    HashMap containing RSID as key and String[RSID, chromosomenr, position, genotype]
      * @throws IOException
-     * @creates file parent1ID+"compared_with"+parent2ID+".txt"
+     * @generates file parent1ID+"compared_with"+parent2ID+".txt"
      */
     public static void diseaseSeeker(String parent1ID, String parent2ID, HashMap variantRefHashMap,
                                      HashMap parent1HashMap, HashMap parent2HashMap) throws IOException {
@@ -358,7 +359,7 @@ public class parentsDiseaseFinder {
             Map.Entry element = (Map.Entry) o;
             String[] parentData = (String[]) element.getValue();
 
-            // To create the key and check if it's in variantRefHashMap
+            // To create a possible key and check if it's in variantRefHashMap
             String key = parentData[1] + parentData[2] + parentData[3];
             if (variantRefHashMap.containsKey((key))) {
                 diseaseVariant match = (diseaseVariant) variantRefHashMap.get(key);
@@ -372,9 +373,78 @@ public class parentsDiseaseFinder {
                         parent1ID + "\t" + parent2ID + "\n");
             }
         }
+
         fileWriter.close();
-        System.out.println("File has been written. \nOpening written file...");
-        Desktop.getDesktop().open(new File(parent1ID + "compared_with" + parent2ID + ".txt"));
+        System.out.println("File has been written. \nWould you like to sort the file by chromosome number?\n" +
+                "Type 'Y' or 'Yes' and press 'Enter' to sort, otherwise, type 'N' or 'No' and press 'Enter' : ");
+
+        //Creating scanner to read user reply to program.
+        Scanner scan = new Scanner(System.in);
+        String input = scan.next();
+        scan.close();
+
+        String filename = parent1ID + "compared_with" + parent2ID + ".txt";
+
+        if (input.toUpperCase().equals("Y") || input.toUpperCase().equals("YES")) {
+            fileSorter(filename);
+        } else {
+            System.out.println("No sorting selected, opening created file.");
+            Desktop.getDesktop().open(new File(filename));
+        }
+    }
+
+
+    /**
+     * Function to sort file generated by parentDiseaseFinder. Needs the name of the file to read and sort.
+     * Reads the file, places contents in an arraylist, sorts said arraylist, deletes old file and places arraylist
+     * contents into a new file.
+     *
+     * bigO = N
+     *
+     * @param filename name of the file which needs to be sorted
+     */
+    public static void fileSorter(String filename) throws IOException {
+
+        System.out.println("Starting file conversion...");
+        ArrayList<String[]> SortArray = new ArrayList<>();
+
+        try {
+            Scanner filereader = new Scanner(new File(filename));
+
+            // Saving first line for writing later
+            String firstline = filereader.nextLine();
+
+            // While loop to loop through file
+            while (filereader.hasNextLine()) {
+                String line = filereader.nextLine();
+                SortArray.add(line.split("\t"));
+            }
+            filereader.close();
+
+            // Sorting happens here, all the numbers get put together
+            SortArray.sort(Comparator.comparing(o -> o[2]));
+
+            System.out.println("Deleting unsorted file and re-writing sorted one...");
+            Files.deleteIfExists(Path.of(filename));
+            FileWriter FileWriter = new FileWriter(filename);
+            FileWriter.write(firstline + "\n");
+
+            // For loop to iteratively write the file again
+            for (String[] data : SortArray) {
+                FileWriter.write(data[0] + "\t" + data[1] + "\t" + data[2] + "\t" + data[3] +
+                        "\t" + data[4] + "\t" + data[5] + "\t" + data[6] + "\n");
+            }
+            FileWriter.close();
+
+            System.out.println("File has been sorted. Opening file now...");
+            // To open the file after it has been written and ending the program.
+            Desktop.getDesktop().open(new File(filename));
+            System.exit(0);
+
+        } catch (FileNotFoundException exception) {
+            System.out.println("File has possibly been moved, restarting programme to ensure nothing is corrupt.\n");
+            referenceChecker();
+        }
     }
 }
 
@@ -382,6 +452,7 @@ public class parentsDiseaseFinder {
 /**
  * Class diseaseVariant to for variant_summary data input, so each line inserted is an object.
  * Implemented compareTo method to order chromosomes.
+ * Implemented toString method to receive string when called.
  */
 class diseaseVariant implements Comparable<diseaseVariant> {
 
@@ -474,10 +545,10 @@ class diseaseVariant implements Comparable<diseaseVariant> {
     }
 
     public String toString() {
-        return type + " mutation on alelle " + alelleID + ", gene " + geneID + ", chromosome " + chromosome + " position " + position +
-                " where nucleobase " + refAlelle + " is replaced with " + altAlelle + ", which may cause disease : " +
-                disease + " with a pathogenicity score of " + pathogenicity +
-                ", where 0 means benign and 1 means pathogenic.";
+        return type + " mutation on alelle " + alelleID + ", gene " + geneID + ", chromosome " +
+                chromosome + " position " + position + " where nucleobase " + refAlelle + " is replaced with " +
+                altAlelle + ", which may cause disease : " + disease + " with a pathogenicity score of " +
+                pathogenicity + ", where 0 means benign and 1 means pathogenic.";
     }
 
     public diseaseVariant(int alelleID, String type, int position, int pathogenicity, int geneID,
@@ -492,7 +563,5 @@ class diseaseVariant implements Comparable<diseaseVariant> {
         this.altAlelle = altAlelle;
         this.disease = disease;
         this.chromosome = chromosome;
-
     }
-
 }
