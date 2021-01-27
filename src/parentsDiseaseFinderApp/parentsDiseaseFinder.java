@@ -1,5 +1,5 @@
 // Made by Dominic Hildebrand
-// Java end project 2021
+// Java end project 6a 2021
 // 27-1-2021
 
 package parentsDiseaseFinderApp;
